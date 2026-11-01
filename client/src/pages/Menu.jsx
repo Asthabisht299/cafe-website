@@ -7,6 +7,7 @@ function Menu() {
   const [menuItems, setMenuItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -43,12 +44,20 @@ function Menu() {
     fetchMenuData();
   }, []);
 
-  const filteredItems =
-    selectedCategory === "All"
-      ? menuItems
-      : menuItems.filter(
-          (item) => item.category_name === selectedCategory
-        );
+const filteredItems = menuItems.filter((item) => {
+  const matchesCategory =
+    selectedCategory === "All" ||
+    item.category_name === selectedCategory;
+
+  const search = searchTerm.trim().toLowerCase();
+
+  const matchesSearch =
+    item.name?.toLowerCase().includes(search) ||
+    item.description?.toLowerCase().includes(search) ||
+    item.category_name?.toLowerCase().includes(search);
+
+  return matchesCategory && matchesSearch;
+});
 
   return (
     <main className="menu-page">
@@ -85,7 +94,31 @@ function Menu() {
         </div>
       ) : (
         <>
-          <section className="menu-filters">
+  <section className="menu-search">
+    <div className="menu-search-box">
+      <span className="search-icon">⌕</span>
+
+      <input
+        type="text"
+        placeholder="Search coffee, desserts, drinks..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+
+      {searchTerm && (
+        <button
+          type="button"
+          className="clear-search"
+          onClick={() => setSearchTerm("")}
+          aria-label="Clear search"
+        >
+          ×
+        </button>
+      )}
+    </div>
+  </section>
+
+  <section className="menu-filters">
             {categories.map((category) => (
               <button
                 key={category.id}
