@@ -24,7 +24,12 @@ const fileFilter = (req, file, cb) => {
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("Only JPG, PNG and WEBP images are allowed."));
+    const error = new Error(
+      "Only JPG, PNG and WEBP images are allowed."
+    );
+
+    error.statusCode = 400;
+    cb(error);
   }
 };
 
@@ -32,7 +37,8 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024,
+    fileSize: 5 * 1024 * 1024, // Maximum 5 MB
+    files: 1,
   },
 });
 
