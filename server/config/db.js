@@ -4,6 +4,12 @@ import fs from "fs";
 
 dotenv.config();
 
+const sslCa = process.env.DB_SSL_CA
+  ? process.env.DB_SSL_CA.replace(/\\n/g, "\n")
+  : process.env.DB_SSL_CA_PATH
+    ? fs.readFileSync(process.env.DB_SSL_CA_PATH, "utf8")
+    : undefined;
+
 const db = mysql.createPool({
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT || 3306),
@@ -11,9 +17,9 @@ const db = mysql.createPool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
 
-  ssl: process.env.DB_SSL_CA_PATH
+  ssl: sslCa
     ? {
-        ca: fs.readFileSync(process.env.DB_SSL_CA_PATH),
+        ca: sslCa,
         rejectUnauthorized: true,
       }
     : undefined,
