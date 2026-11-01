@@ -262,7 +262,33 @@
 .footer-copy {
   text-align: right;
 }
+.footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 25px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(198, 182, 168, 0.2);
+}
 
+.footer-bottom .footer-copy {
+  margin: 0;
+  text-align: left;
+}
+
+.footer-staff-login {
+  color: #c6b6a8;
+  font-size: 12px;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.footer-staff-login:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
 
 /* =====================================
    TABLET RESPONSIVE DESIGN

@@ -79,9 +79,15 @@ function Footer() {
         </div>
       </div>
 
-      <p className="footer-copy">
-        © {new Date().getFullYear()} CAFÉ. All rights reserved.
-      </p>
+     <div className="footer-bottom">
+  <p className="footer-copy">
+    © {new Date().getFullYear()} CAFÉ. All rights reserved.
+  </p>
+
+  <a href="/admin/login" className="footer-staff-login">
+    Staff Login ↗
+  </a>
+</div>
     </footer>
   );
 }
