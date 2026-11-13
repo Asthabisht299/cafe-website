@@ -89,6 +89,9 @@ function AdminLayout() {
           <NavLink to="/admin/enquiries">
             Enquiries
           </NavLink>
+          <NavLink to="/admin/reviews">
+  Customer Reviews
+</NavLink>
 
           <NavLink to="/admin/table-qr">
             Table QR Codes

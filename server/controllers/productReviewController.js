@@ -41,10 +41,13 @@ export const createProductReview = async (req, res, next) => {
       });
     }
 
-    const [orderedItems] = await db.query(
-      "SELECT id FROM order_items WHERE order_id = ? AND product_id = ? LIMIT 1",
-      [order.id, productId]
-    );
+   const [orderedItems] = await db.query(
+  `SELECT product_id, product_name
+   FROM order_items
+   WHERE order_id = ? AND product_id = ?
+   LIMIT 1`,
+  [order.id, productId]
+);
 
     if (!orderedItems.length) {
       return res.status(403).json({
@@ -53,10 +56,18 @@ export const createProductReview = async (req, res, next) => {
       });
     }
 
-    await db.query(
-      "INSERT INTO product_reviews (order_id, product_id, rating, review) VALUES (?, ?, ?, ?)",
-      [order.id, productId, stars, reviewText || null]
-    );
+  await db.query(
+  `INSERT INTO product_reviews
+   (order_id, product_id, product_name, rating, review)
+   VALUES (?, ?, ?, ?, ?)`,
+  [
+    order.id,
+    productId,
+    orderedItems[0].product_name,
+    stars,
+    reviewText || null,
+  ]
+);
 
     return res.status(201).json({
       success: true,
@@ -73,6 +84,7 @@ export const createProductReview = async (req, res, next) => {
   }
 };
 
+
 // Admin-only route: all reviews, newest first.
 export const getProductReviewsForAdmin = async (req, res, next) => {
   try {
@@ -81,13 +93,12 @@ export const getProductReviewsForAdmin = async (req, res, next) => {
         r.id,
         r.order_id,
         r.product_id,
-        p.name AS product_name,
+        r.product_name,
         o.customer_name,
         r.rating,
         r.review,
         r.created_at
       FROM product_reviews r
-      INNER JOIN products p ON p.id = r.product_id
       INNER JOIN orders o ON o.id = r.order_id
       ORDER BY r.created_at DESC
     `);

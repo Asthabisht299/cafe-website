@@ -74,7 +74,7 @@ function ProductRating({ token, productId, productName }) {
         />
       </label>
       {error && <p className="product-review-error" role="alert">{error}</p>}
-      <button type="submit" disabled={loading}>
+      <button type="submit" disabled={loading || rating === 0}>
         {loading ? "Submitting..." : "Submit Rating"}
       </button>
     </form>

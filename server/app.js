@@ -22,6 +22,7 @@ import contactRoutes from "./routes/contactRoutes.js";
 import newsletterRoutes from "./routes/newsletterRoutes.js";
 import adminNewsletterRoutes from "./routes/adminNewsletterRoutes.js";
 import tableRoutes from "./routes/tableRoutes.js";
+import productReviewRoutes from "./routes/productReviewRoutes.js";
 
 const app = express();
 
@@ -65,6 +66,8 @@ app.use("/api/tables", tableRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/newsletter", newsletterRoutes);
 app.use("/api", adminNewsletterRoutes);
+app.use("/api", testRoutes);
+app.use("/api", productReviewRoutes);
 
 
 // Handle invalid routes

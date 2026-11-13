@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import api from "../api/axios";
 import "./OrderTracking.css";
+import ProductRating from "../components/ProductRating";
 
 const statuses = [
   "placed",
@@ -154,40 +155,62 @@ function OrderTracking() {
         <section className="tracking-items">
           <h2>Your Items</h2>
 
-          {order.items?.map((item) => {
-            const options = formatOptions(item.selected_options);
+         
+{order.items?.map((item) => {
+  const options = formatOptions(item.selected_options);
 
-            return (
-              <div className="tracking-item" key={item.id}>
-                <div className="tracking-item-details">
-                  <strong>{item.product_name}</strong>
+  return (
+    <div className="tracking-item-wrapper" key={item.id}>
+      <div className="tracking-item">
+        <div className="tracking-item-details">
+          <strong>{item.product_name}</strong>
 
-                  <p>Quantity: {item.quantity}</p>
+          <p>Quantity: {item.quantity}</p>
 
-                  <p>
-                    Unit Price: {formatPrice(item.unit_price)}
-                  </p>
+          <p>
+            Unit Price: {formatPrice(item.unit_price)}
+          </p>
 
-                  {options.length > 0 && (
-                    <div className="tracking-selected-options">
-                      <strong>Selected Extras</strong>
+          {options.length > 0 && (
+            <div className="tracking-selected-options">
+              <strong>Selected Extras</strong>
 
-                      {options.map((option) => (
-                        <p key={option.id}>
-                          + {option.option_name} —{" "}
-                          {formatPrice(option.additional_price)}
-                        </p>
-                      ))}
-                    </div>
-                  )}
-                </div>
+              {options.map((option) => (
+                <p key={option.id}>
+                  + {option.option_name} —{" "}
+                  {formatPrice(option.additional_price)}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
 
-                <strong className="tracking-item-price">
-                  {formatPrice(item.subtotal)}
-                </strong>
-              </div>
-            );
-          })}
+        <strong className="tracking-item-price">
+          {formatPrice(item.subtotal)}
+        </strong>
+      </div>
+
+      {order.order_status === "completed" &&
+        item.product_id &&
+        !Number(item.has_reviewed) && (
+          <ProductRating
+            token={token}
+            productId={item.product_id}
+            productName={item.product_name}
+          />
+        )}
+
+      {order.order_status === "completed" &&
+        item.product_id &&
+        Number(item.has_reviewed) === 1 && (
+          <p className="review-already-submitted">
+            Thank you! You've already rated this item.
+          </p>
+        )}
+    </div>
+  );
+})}
+
         </section>
 
         {isCancelled && (

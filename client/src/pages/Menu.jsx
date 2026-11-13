@@ -11,6 +11,10 @@ function Menu() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [expandedReviews, setExpandedReviews] = useState({});
+  const [productReviews, setProductReviews] = useState({});
+  const [reviewLoading, setReviewLoading] = useState({});
+
   const fetchMenuData = async () => {
     try {
       setLoading(true);
@@ -24,9 +28,17 @@ function Menu() {
 
       setMenuItems(productsResponse.data.products || []);
 
+      // Hide Test categories from customer-facing filters
+      const realCategories = (
+        categoriesResponse.data.categories || []
+      ).filter(
+        (category) =>
+          !category.name?.toLowerCase().includes("test")
+      );
+
       setCategories([
         { id: "all", name: "All" },
-        ...(categoriesResponse.data.categories || []),
+        ...realCategories,
       ]);
     } catch (err) {
       console.error("Error fetching menu data:", err);
@@ -44,20 +56,61 @@ function Menu() {
     fetchMenuData();
   }, []);
 
-const filteredItems = menuItems.filter((item) => {
-  const matchesCategory =
-    selectedCategory === "All" ||
-    item.category_name === selectedCategory;
+  const toggleReviews = async (productId) => {
+    const isExpanded = expandedReviews[productId];
 
-  const search = searchTerm.trim().toLowerCase();
+    setExpandedReviews((previous) => ({
+      ...previous,
+      [productId]: !previous[productId],
+    }));
 
-  const matchesSearch =
-    item.name?.toLowerCase().includes(search) ||
-    item.description?.toLowerCase().includes(search) ||
-    item.category_name?.toLowerCase().includes(search);
+    if (isExpanded || productReviews[productId]) {
+      return;
+    }
 
-  return matchesCategory && matchesSearch;
-});
+    try {
+      setReviewLoading((previous) => ({
+        ...previous,
+        [productId]: true,
+      }));
+
+      const response = await api.get(
+        `/products/${productId}/reviews`
+      );
+
+      setProductReviews((previous) => ({
+        ...previous,
+        [productId]: response.data.reviews || [],
+      }));
+    } catch (err) {
+      console.error("Unable to fetch reviews:", err);
+
+      setProductReviews((previous) => ({
+        ...previous,
+        [productId]: null,
+      }));
+    } finally {
+      setReviewLoading((previous) => ({
+        ...previous,
+        [productId]: false,
+      }));
+    }
+  };
+
+  const filteredItems = menuItems.filter((item) => {
+    const matchesCategory =
+      selectedCategory === "All" ||
+      item.category_name === selectedCategory;
+
+    const search = searchTerm.trim().toLowerCase();
+
+    const matchesSearch =
+      item.name?.toLowerCase().includes(search) ||
+      item.description?.toLowerCase().includes(search) ||
+      item.category_name?.toLowerCase().includes(search);
+
+    return matchesCategory && matchesSearch;
+  });
 
   return (
     <main className="menu-page">
@@ -94,31 +147,31 @@ const filteredItems = menuItems.filter((item) => {
         </div>
       ) : (
         <>
-  <section className="menu-search">
-    <div className="menu-search-box">
-      <span className="search-icon">⌕</span>
+          <section className="menu-search">
+            <div className="menu-search-box">
+              <span className="search-icon">⌕</span>
 
-      <input
-        type="text"
-        placeholder="Search coffee, desserts, drinks..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-      />
+              <input
+                type="text"
+                placeholder="Search coffee, desserts, drinks..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
 
-      {searchTerm && (
-        <button
-          type="button"
-          className="clear-search"
-          onClick={() => setSearchTerm("")}
-          aria-label="Clear search"
-        >
-          ×
-        </button>
-      )}
-    </div>
-  </section>
+              {searchTerm && (
+                <button
+                  type="button"
+                  className="clear-search"
+                  onClick={() => setSearchTerm("")}
+                  aria-label="Clear search"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          </section>
 
-  <section className="menu-filters">
+          <section className="menu-filters">
             {categories.map((category) => (
               <button
                 key={category.id}
@@ -157,6 +210,28 @@ const filteredItems = menuItems.filter((item) => {
 
                     <h3>{item.name}</h3>
 
+                    <div className="menu-card-rating">
+                      {Number(item.total_reviews) > 0 ? (
+                        <>
+                          <span className="rating-display-stars">
+                            ★
+                          </span>
+
+                          <strong>
+                            {Number(item.average_rating).toFixed(1)}
+                          </strong>
+
+                          <span>
+                            ({item.total_reviews} reviews)
+                          </span>
+                        </>
+                      ) : (
+                        <span className="no-rating">
+                          Be the first to review
+                        </span>
+                      )}
+                    </div>
+
                     <p>{item.description}</p>
 
                     <div className="menu-card-bottom">
@@ -170,6 +245,71 @@ const filteredItems = menuItems.filter((item) => {
                       >
                         View Item
                       </Link>
+                    </div>
+
+                    <div className="menu-review-section">
+                      <button
+                        type="button"
+                        className="review-toggle-btn"
+                        onClick={() => toggleReviews(item.id)}
+                        aria-expanded={!!expandedReviews[item.id]}
+                      >
+                        {expandedReviews[item.id]
+                          ? "Hide customer reviews"
+                          : "Read customer reviews"}
+
+                        <span>
+                          {expandedReviews[item.id] ? "−" : "+"}
+                        </span>
+                      </button>
+
+                      {expandedReviews[item.id] && (
+                        <div className="menu-customer-reviews">
+                          {reviewLoading[item.id] ? (
+                            <p>Loading reviews...</p>
+                          ) : productReviews[item.id] === null ? (
+                            <p>
+                              Unable to load reviews. Please try again.
+                            </p>
+                          ) : productReviews[item.id]?.length > 0 ? (
+                            productReviews[item.id].map((review) => (
+                              <div
+                                className="menu-review"
+                                key={review.id}
+                              >
+                                <div className="menu-review-header">
+                                  <strong>
+                                    {review.customer_name}
+                                  </strong>
+
+                                  <span className="menu-review-stars">
+                                    {"★".repeat(Number(review.rating))}
+                                    {"☆".repeat(
+                                      5 - Number(review.rating)
+                                    )}
+                                  </span>
+                                </div>
+
+                                <p>
+                                  {review.review ||
+                                    "Customer left a rating without a comment."}
+                                </p>
+
+                                <small>
+                                  {new Date(
+                                    review.created_at
+                                  ).toLocaleDateString("en-IN")}
+                                </small>
+                              </div>
+                            ))
+                          ) : (
+                            <p>
+                              No reviews yet. Be the first to share
+                              your experience!
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </article>

@@ -36,20 +36,28 @@ export const trackOrder = async (req, res, next) => {
         message: "Order not found.",
       });
     }
-
     const order = orders[0];
-
     // Get products belonging to this order
-    const [items] = await db.query(
-      `SELECT
-        product_name,
-        quantity,
-        unit_price,
-        subtotal
-       FROM order_items
-       WHERE order_id = ?`,
-      [order.id]
-    );
+const [items] = await db.query(
+  `SELECT
+    oi.id,
+    oi.product_id,
+    oi.product_name,
+    oi.quantity,
+    oi.unit_price,
+    oi.subtotal,
+    CASE
+      WHEN pr.id IS NULL THEN 0
+      ELSE 1
+    END AS has_reviewed
+   FROM order_items oi
+   LEFT JOIN product_reviews pr
+     ON pr.order_id = oi.order_id
+     AND pr.product_id = oi.product_id
+   WHERE oi.order_id = ?`,
+  [order.id]
+);
+
 
     return res.status(200).json({
       success: true,

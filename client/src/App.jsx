@@ -25,6 +25,7 @@ import AdminEnquiries from "./admin/AdminEnquiries";
 import TableOrder from "./pages/TableOrder";
 import AdminTableQR from "./admin/AdminTableQR";
 import AdminTables from "./admin/AdminTables";
+import AdminReviews from "./admin/AdminReviews";
 
 function App() {
   return (
@@ -56,7 +57,7 @@ function App() {
           <Route path="enquiries" element={<AdminEnquiries />} />
           <Route path="table-qr" element={<AdminTableQR />} />
           <Route path="tables" element={<AdminTables />} />
-          
+          <Route path="reviews" element={<AdminReviews />} />
           
         </Route>
         

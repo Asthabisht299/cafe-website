@@ -111,6 +111,18 @@ function ProductDetails() {
 
         <h1>{product.name}</h1>
 
+        <div className="product-details-rating">
+  {Number(product.total_reviews) > 0 ? (
+    <>
+      <span className="rating-display-stars">★</span>
+      <strong>{Number(product.average_rating).toFixed(1)}</strong>
+      <span>({product.total_reviews} customer reviews)</span>
+    </>
+  ) : (
+    <span className="no-rating">Be the first to review this item</span>
+  )}
+</div>
+
         <p className="product-description">
           {product.description || "A delicious treat from CAFÉ."}
         </p>

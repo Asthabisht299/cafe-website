@@ -4,12 +4,12 @@ import jwt from "jsonwebtoken";
 import db from "../config/db.js";
 import { validationResult } from "express-validator";
 
+const isProduction = process.env.NODE_ENV === "production";
+
 const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite:
-    process.env.COOKIE_SAME_SITE ||
-    (process.env.NODE_ENV === "production" ? "none" : "lax"),
+  secure: isProduction,
+  sameSite: isProduction ? "none" : "lax",
   maxAge: 24 * 60 * 60 * 1000,
   path: "/",
 };
