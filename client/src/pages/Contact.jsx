@@ -1,11 +1,13 @@
 
 import { useState } from "react";
 import api from "../api/axios";
+import cafeDetails from "../config/cafeDetails";
 
 function Contact() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    phone: "",
     subject: "",
     message: "",
   });
@@ -13,6 +15,19 @@ function Contact() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // WhatsApp configuration
+  const whatsappNumber = (cafeDetails.whatsappNumber || "").replace(/\D/g, "");
+  const validWhatsAppNumber =
+    whatsappNumber.length >= 8 && whatsappNumber.length <= 15;
+
+  const whatsappMessage = encodeURIComponent(
+    "Hello! I would like to know more about your café."
+  );
+
+  const whatsappUrl = validWhatsAppNumber
+    ? `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`
+    : "";
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -37,6 +52,7 @@ function Contact() {
       await api.post("/contact", {
         name: formData.name.trim(),
         email: formData.email.trim(),
+        phone: formData.phone.trim(),
         subject: formData.subject.trim(),
         message: formData.message.trim(),
       });
@@ -46,6 +62,7 @@ function Contact() {
       setFormData({
         name: "",
         email: "",
+        phone: "",
         subject: "",
         message: "",
       });
@@ -77,6 +94,7 @@ function Contact() {
       </section>
 
       <section className="contact-container">
+        {/* Contact Information */}
         <div className="contact-info">
           <p className="section-label">CONTACT INFORMATION</p>
 
@@ -89,21 +107,83 @@ function Contact() {
 
           <div className="contact-detail">
             <h3>Our Location</h3>
-            <p>Our café address will be added here.</p>
+
+            <p>
+              {cafeDetails.address || "Location to be announced."}
+            </p>
+
+            {cafeDetails.googleMapsUrl && (
+              <a
+                href={cafeDetails.googleMapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                View on Google Maps →
+              </a>
+            )}
           </div>
 
           <div className="contact-detail">
             <h3>Email Us</h3>
-            <p>Our café email will be added here.</p>
+
+            {cafeDetails.email ? (
+              <a href={`mailto:${cafeDetails.email}`}>
+                {cafeDetails.email}
+              </a>
+            ) : (
+              <p>Email to be announced.</p>
+            )}
           </div>
 
           <div className="contact-detail">
+            <h3>Call Us</h3>
+
+            {cafeDetails.phone ? (
+              <a href={`tel:${cafeDetails.phone}`}>
+                {cafeDetails.phone}
+              </a>
+            ) : (
+              <p>Phone number to be announced.</p>
+            )}
+          </div>
+
+          {/* WhatsApp Contact */}
+          {validWhatsAppNumber && (
+            <div className="contact-detail">
+              <h3>Chat With Us</h3>
+
+              <p>
+                Have a quick question? Connect with us directly on WhatsApp.
+              </p>
+
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="contact-whatsapp-link"
+              >
+                Message Us on WhatsApp →
+              </a>
+            </div>
+          )}
+
+          <div className="contact-detail">
             <h3>Opening Hours</h3>
-            <p>Monday – Sunday</p>
-            <p>Opening timings will be added here.</p>
+
+            <p>
+              {cafeDetails.openingHours ||
+                "Opening hours to be announced."}
+            </p>
+
+            <p>
+              {cafeDetails.closingDay
+                ? `Weekly closing day: ${cafeDetails.closingDay}`
+                : "Weekly closing day to be announced."}
+            </p>
           </div>
         </div>
 
+        {/* Contact Form */}
         <div className="contact-form-container">
           <h2>Send Us a Message</h2>
 
@@ -130,6 +210,19 @@ function Contact() {
               maxLength={150}
               placeholder="Enter your email"
               value={formData.email}
+              onChange={handleChange}
+              required
+            />
+
+            <label htmlFor="phone">Phone Number</label>
+
+            <input
+              id="phone"
+              type="tel"
+              name="phone"
+              maxLength={20}
+              placeholder="Enter your phone number"
+              value={formData.phone}
               onChange={handleChange}
               required
             />

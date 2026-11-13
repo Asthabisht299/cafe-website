@@ -1,28 +1,33 @@
-
 import db from "../config/db.js";
 
 export const createEnquiry = async (req, res, next) => {
   try {
-    const { name, email, subject, message } = req.body;
+    const { name, email, phone, subject, message } = req.body;
 
+    // Check required fields
     if (
       typeof name !== "string" ||
       typeof email !== "string" ||
+      typeof phone !== "string" ||
       typeof message !== "string" ||
       !name.trim() ||
       !email.trim() ||
+      !phone.trim() ||
       !message.trim()
     ) {
       return res.status(400).json({
         success: false,
-        message: "Name, email and message are required.",
+        message: "Name, email, phone and message are required.",
       });
     }
 
+    // Check maximum field lengths
     if (
       name.trim().length > 100 ||
       email.trim().length > 150 ||
-      (subject && (typeof subject !== "string" || subject.trim().length > 200)) ||
+      phone.trim().length > 20 ||
+      (subject &&
+        (typeof subject !== "string" || subject.trim().length > 200)) ||
       message.trim().length > 5000
     ) {
       return res.status(400).json({
@@ -32,7 +37,9 @@ export const createEnquiry = async (req, res, next) => {
     }
 
     const cleanEmail = email.trim().toLowerCase();
+    const cleanPhone = phone.trim();
 
+    // Validate email
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
       return res.status(400).json({
         success: false,
@@ -40,13 +47,23 @@ export const createEnquiry = async (req, res, next) => {
       });
     }
 
+    // Allow digits, spaces, +, hyphens and parentheses in phone numbers
+    if (!/^[+0-9\s()-]+$/.test(cleanPhone) || !/\d{7,15}/.test(cleanPhone)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid phone number.",
+      });
+    }
+
+    // Save enquiry in database
     await db.query(
       `INSERT INTO contact_enquiries
-       (name, email, subject, message)
-       VALUES (?, ?, ?, ?)`,
+       (name, email, phone, subject, message)
+       VALUES (?, ?, ?, ?, ?)`,
       [
         name.trim(),
         cleanEmail,
+        cleanPhone,
         subject?.trim() || null,
         message.trim(),
       ]

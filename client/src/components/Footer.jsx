@@ -1,6 +1,8 @@
 
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import api from "../api/axios";
+import cafeDetails from "../config/cafeDetails";
 
 function Footer() {
   const [email, setEmail] = useState("");
@@ -39,11 +41,40 @@ function Footer() {
   return (
     <footer className="footer">
       <div className="footer-main">
-        <div>
+        <div className="footer-brand-section">
           <h2>
             CAFÉ<span>.</span>
           </h2>
+
           <p>A little moment of happiness, every day.</p>
+
+          {cafeDetails.instagramUrl && (
+            <a
+              href={cafeDetails.instagramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="footer-instagram-link"
+              aria-label="Follow CAFÉ on Instagram"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="19"
+                height="19"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="5" />
+                <circle cx="12" cy="12" r="4" />
+                <circle cx="18" cy="6" r="1" fill="currentColor" />
+              </svg>
+
+              <span>Follow us on Instagram ↗</span>
+            </a>
+          )}
         </div>
 
         <div className="footer-newsletter">
@@ -79,15 +110,27 @@ function Footer() {
         </div>
       </div>
 
-     <div className="footer-bottom">
-  <p className="footer-copy">
-    © {new Date().getFullYear()} CAFÉ. All rights reserved.
-  </p>
+      <div className="footer-bottom">
+        <p className="footer-copy">
+          © {new Date().getFullYear()} CAFÉ. All rights reserved.
+        </p>
 
-  <a href="/admin/login" className="footer-staff-login">
-    Staff Login ↗
-  </a>
-</div>
+        <div className="footer-bottom-links">
+          {cafeDetails.instagramUrl && (
+            <a
+              href={cafeDetails.instagramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Instagram ↗
+            </a>
+          )}
+
+          <Link to="/admin/login" className="footer-staff-login">
+            Staff Login ↗
+          </Link>
+        </div>
+      </div>
     </footer>
   );
 }

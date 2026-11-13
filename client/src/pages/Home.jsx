@@ -1,7 +1,80 @@
 
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import api from "../api/axios";
+import cafeDetails from "../config/cafeDetails";
 
 function Home() {
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState("");
+
+  const instagramPhotos = [
+    {
+      image:
+        "https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=700",
+      alt: "Freshly brewed coffee",
+    },
+    {
+      image:
+        "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=700",
+      alt: "Coffee served in a ceramic cup",
+    },
+    {
+      image:
+        "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=700",
+      alt: "Coffee preparation",
+    },
+    {
+      image:
+        "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=700",
+      alt: "Warm and welcoming café interior",
+    },
+    {
+      image:
+        "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=700",
+      alt: "Fresh bakery treats",
+    },
+    {
+      image:
+        "https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=700",
+      alt: "A beautifully prepared coffee",
+    },
+  ];
+
+  // Fetch featured products from the existing backend API
+  useEffect(() => {
+    const fetchFeaturedProducts = async () => {
+      try {
+        setProductsLoading(true);
+        setProductsError("");
+
+        const response = await api.get("/products");
+
+        const availableProducts = (
+          response.data.products || []
+        ).filter(
+          (product) => Number(product.is_available) !== 0
+        );
+
+        setFeaturedProducts(availableProducts.slice(0, 3));
+      } catch (error) {
+        console.error(
+          "Unable to fetch featured products:",
+          error
+        );
+
+        setProductsError(
+          "Our favourites are temporarily unavailable."
+        );
+      } finally {
+        setProductsLoading(false);
+      }
+    };
+
+    fetchFeaturedProducts();
+  }, []);
+
   return (
     <main>
       {/* HERO SECTION */}
@@ -93,7 +166,7 @@ function Home() {
         </Link>
       </section>
 
-      {/* FEATURED MENU */}
+      {/* DYNAMIC FEATURED MENU */}
       <section className="menu-section" id="menu">
         <div className="section-heading">
           <div>
@@ -106,43 +179,64 @@ function Home() {
           </Link>
         </div>
 
-        <div className="product-grid">
-          <article className="product-card">
-            <img
-              src="https://images.unsplash.com/photo-1570968915860-54d5c301fa9f?w=800"
-              alt="Cappuccino coffee"
-            />
-            <div className="product-info">
-              <h3>Classic Cappuccino</h3>
-              <p>Rich espresso with smooth, creamy milk.</p>
-              <span>₹149</span>
-            </div>
-          </article>
+        {productsLoading ? (
+          <p className="featured-products-status">
+            Preparing our favourites...
+          </p>
+        ) : productsError ? (
+          <p className="featured-products-status">
+            {productsError}
+          </p>
+        ) : featuredProducts.length > 0 ? (
+          <div className="product-grid">
+            {featuredProducts.map((product) => (
+              <article
+                className="product-card"
+                key={product.id}
+              >
+                <Link
+                  to={`/product/${product.id}`}
+                  className="featured-product-image"
+                >
+                  <img
+                    src={
+                      product.image_url ||
+                      "https://placehold.co/600x400?text=CAFE"
+                    }
+                    alt={product.name}
+                    loading="lazy"
+                  />
+                </Link>
 
-          <article className="product-card">
-            <img
-              src="https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=800"
-              alt="Chocolate brownie"
-            />
-            <div className="product-info">
-              <h3>Chocolate Brownie</h3>
-              <p>Rich, fudgy and freshly baked.</p>
-              <span>₹129</span>
-            </div>
-          </article>
+                <div className="product-info">
+                  <h3>{product.name}</h3>
 
-          <article className="product-card">
-            <img
-              src="https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=800"
-              alt="Coffee served in a cup"
-            />
-            <div className="product-info">
-              <h3>Signature Latte</h3>
-              <p>Silky milk blended with espresso.</p>
-              <span>₹169</span>
-            </div>
-          </article>
-        </div>
+                  <p>
+                    {product.description ||
+                      "Made fresh with love."}
+                  </p>
+
+                  <div className="featured-product-bottom">
+                    <span>
+                      ₹{Number(product.price).toFixed(2)}
+                    </span>
+
+                    <Link
+                      to={`/product/${product.id}`}
+                      className="featured-product-link"
+                    >
+                      View Item →
+                    </Link>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="featured-products-status">
+            Our menu favourites will be available soon.
+          </p>
+        )}
       </section>
 
       {/* GALLERY PROMOTION */}
@@ -159,13 +253,71 @@ function Home() {
         </div>
       </section>
 
+      {/* INSTAGRAM SECTION */}
+      <section className="instagram-section">
+        <div className="instagram-heading">
+          <p className="eyebrow">
+            LITTLE MOMENTS, BEAUTIFULLY CAPTURED
+          </p>
+
+          <h2>A Little Taste of CAFÉ.</h2>
+
+          <p>
+            Coffee moments, sweet treats and little things
+            that make every day special.
+          </p>
+
+          {cafeDetails.instagramUrl ? (
+            <a
+              href={cafeDetails.instagramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="instagram-follow-button"
+            >
+              <span>◎</span> Follow Us on Instagram ↗
+            </a>
+          ) : (
+            <p className="instagram-coming-soon">
+              Our Instagram profile is coming soon.
+            </p>
+          )}
+        </div>
+
+        <div className="instagram-photo-grid">
+          {instagramPhotos.map((photo, index) => (
+            <div className="instagram-photo" key={index}>
+              <img
+                src={photo.image}
+                alt={photo.alt}
+                loading="lazy"
+              />
+
+              <div
+                className="instagram-photo-overlay"
+                aria-hidden="true"
+              >
+                <span>CAFÉ</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <p className="instagram-disclaimer">
+          A curated collection of café-inspired photography.
+          These are illustrative images, not a live Instagram feed.
+        </p>
+      </section>
+
       {/* CONTACT SECTION */}
       <section className="contact-section" id="contact">
         <p className="eyebrow">COME SAY HELLO</p>
+
         <h2>Your coffee break is waiting.</h2>
+
         <p>
           Good coffee and warm moments are just around the corner.
         </p>
+
         <Link to="/contact" className="primary-button">
           Contact Us
         </Link>
