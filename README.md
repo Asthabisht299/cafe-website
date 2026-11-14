@@ -4,7 +4,7 @@
 
 ### A modern digital experience for cafés ✨
 
-A full-stack café website designed to simplify customer ordering and café management through a responsive interface, QR-based dine-in ordering, and an administrative dashboard.
+A full-stack café website designed to simplify customer ordering and café management through a responsive interface, QR-based dine-in ordering, product reviews, and an administrative dashboard.
 
 [![Live Website](https://img.shields.io/badge/♡_Live_Website-Visit_Café-9B7653?style=for-the-badge&logo=vercel&logoColor=white)](https://cafe-website-six-theta.vercel.app)
 [![GitHub](https://img.shields.io/badge/GitHub-Source_Code-5C4033?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Asthabisht299/cafe-website)
@@ -26,7 +26,9 @@ The Café Website is a full-stack web application developed to provide customers
 
 Customers can explore the menu, view product details, add items to their cart, place takeaway orders, and order directly from their table using QR codes.
 
-Administrators can manage products, categories, orders, enquiries, tables, and customer-facing content through a dedicated dashboard.
+The platform also supports product ratings and reviews, order tracking, customer enquiries, and WhatsApp contact functionality.
+
+Administrators can manage products, categories, orders, tables, customer enquiries, and product reviews through a dedicated dashboard.
 
 **Project Goal:** To bring customer ordering and café management together in one easy-to-use digital platform.
 
@@ -36,21 +38,26 @@ Administrators can manage products, categories, orders, enquiries, tables, and c
 
 - Responsive homepage and café information pages.
 - Browse menu items and categories.
+- Dynamic featured products on the homepage.
+- Live menu search and product discovery.
 - View individual product details.
 - Add products to cart and manage quantities.
 - Place takeaway orders.
 - QR-based dine-in ordering.
 - Table verification for dine-in orders.
 - Order confirmation and order tracking.
-- Contact form for customer enquiries.
+- Product ratings and customer reviews.
+- Contact form with customer phone number support.
+- WhatsApp contact button.
 - Newsletter subscription.
-- Gallery, testimonials and opening-hours information.
+- Café gallery, testimonials, and opening-hours information.
+- Instagram section with configurable social media link.
 
 ### 🎀 Admin Dashboard
 
 - Secure admin authentication.
 - Dashboard with order statistics.
-- Add, edit and delete products.
+- Add, edit, and delete products.
 - Manage product categories.
 - Upload and manage product images.
 - View and manage customer orders.
@@ -58,6 +65,7 @@ Administrators can manage products, categories, orders, enquiries, tables, and c
 - Manage customer enquiries.
 - Manage café tables.
 - Generate individual and bulk table QR codes.
+- View and manage product reviews.
 
 ### 🔐 Security & Backend Features
 
@@ -70,7 +78,9 @@ Administrators can manage products, categories, orders, enquiries, tables, and c
 - Centralized error handling.
 - Image upload validation.
 - Secure table QR token verification.
-- Database integration using MySQL.
+- Database integration using MySQL-compatible TiDB Cloud.
+- Transaction-based order creation.
+- Order tracking using secure tracking tokens.
 
 ---
 
@@ -111,14 +121,14 @@ The application follows a client-server architecture.
                   Axios Requests
                         |
                         v
-                Node.js + Express
-                     Backend
+               Node.js + Express
+                    Backend
                         |
              +----------+----------+
              |          |          |
              v          v          v
-           MySQL    Cloudinary   JWT Auth
-          Database  Image Store  Security
+           TiDB     Cloudinary   JWT Auth
+         Database   Image Store  Security
 ```
 
 ## 📂 Project Structure
@@ -133,6 +143,8 @@ cafe-website/
 │   │   ├── components/
 │   │   ├── pages/
 │   │   ├── context/
+│   │   ├── admin/
+│   │   ├── config/
 │   │   ├── api/
 │   │   └── ...
 │   ├── package.json
@@ -144,6 +156,8 @@ cafe-website/
 │   ├── middleware/
 │   ├── models/
 │   ├── routes/
+│   ├── database/
+│   │   └── migrations/
 │   ├── uploads/
 │   ├── package.json
 │   └── server.js
@@ -256,23 +270,34 @@ The project uses cloud services for deployment and storage.
 
 ---
 
-## 💳 Ordering Information
+## 💳 Ordering & Payment Information
 
-The project supports takeaway and QR-based dine-in ordering.
+The project currently supports:
 
-Payment is currently designed around cash at pickup or payment at the café counter. Online payment processing and home delivery are not included.
+- Takeaway ordering.
+- QR-based dine-in ordering.
+- Table verification.
+- Payment at the café counter.
+- Cash payment at pickup.
+- Order confirmation and tracking.
+
+Online payment gateway integration and home delivery are planned future enhancements.
 
 ---
 
 ## 🚀 Future Improvements
 
-- Online payment gateway integration.
+- Online payment gateway integration (Razorpay / UPI).
+- Kitchen Order Display System.
 - Home delivery functionality.
 - Advanced sales and revenue analytics.
 - Customer accounts and order history.
-- Improved search and filtering.
-- Email and order notifications.
-- More advanced inventory management.
+- Inventory and stock management.
+- Coupons, discounts, and promotional offers.
+- Customer loyalty and rewards system.
+- Email, SMS, and order notifications.
+- Advanced search and filtering.
+- Automated database backups.
 
 ---
 
@@ -287,7 +312,10 @@ Through this project, I gained practical experience in:
 - Building CRUD operations.
 - Handling image uploads using Cloudinary.
 - Creating QR-based ordering functionality.
+- Implementing product ratings and reviews.
+- Building customer order tracking.
 - Deploying frontend and backend applications.
+- Managing cloud database connectivity.
 - Debugging real-world integration issues.
 
 ---
@@ -301,6 +329,7 @@ Through this project, I gained practical experience in:
 B.Tech Computer Science & Engineering
 
 [![GitHub](https://img.shields.io/badge/GitHub-Asthabisht299-5C4033?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Asthabisht299)
+
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-9B7653?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/astha-bisht-s291105)
 
 *Built with ☕, creativity, and lots of debugging.*
