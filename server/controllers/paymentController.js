@@ -547,11 +547,11 @@ export const verifyRazorpayPayment = async (req, res, next) => {
 // 3. HANDLE RAZORPAY WEBHOOK
 // ==========================================
 
+
 export const handleRazorpayWebhook = async (req, res) => {
   let connection;
 
   try {
-    // Webhook secret must exist in backend environment variables
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
 
     if (!webhookSecret) {
@@ -563,7 +563,7 @@ export const handleRazorpayWebhook = async (req, res) => {
       });
     }
 
-    // express.raw() must provide the original Buffer
+    // Verify that Express received the original raw request body
     if (!Buffer.isBuffer(req.body)) {
       return res.status(400).json({
         success: false,
@@ -578,7 +578,8 @@ export const handleRazorpayWebhook = async (req, res) => {
       typeof receivedSignature !== "string" ||
       !/^[a-f0-9]{64}$/i.test(receivedSignature) ||
       typeof eventId !== "string" ||
-      !eventId.trim()
+      !eventId.trim() ||
+      eventId.length > 100
     ) {
       return res.status(400).json({
         success: false,
@@ -586,7 +587,7 @@ export const handleRazorpayWebhook = async (req, res) => {
       });
     }
 
-    // Verify signature against the exact raw request body
+    // Verify the webhook signature using the exact raw body
     const expectedSignature = crypto
       .createHmac("sha256", webhookSecret)
       .update(req.body)
@@ -617,17 +618,16 @@ export const handleRazorpayWebhook = async (req, res) => {
       });
     }
 
-    const eventType = eventData.event;
+    const eventType = eventData?.event;
 
-    if (typeof eventType !== "string" || !eventType) {
+    if (typeof eventType !== "string" || !eventType.trim()) {
       return res.status(400).json({
         success: false,
         message: "Invalid webhook event.",
       });
     }
 
-    // Store the event ID before processing.
-    // The primary key prevents duplicate event records.
+    // Record the event. The primary key prevents duplicate event records.
     await db.query(
       `INSERT IGNORE INTO payment_webhook_events
        (event_id, event_type, processing_status)
@@ -638,9 +638,9 @@ export const handleRazorpayWebhook = async (req, res) => {
     connection = await db.getConnection();
     await connection.beginTransaction();
 
-    // Lock this event so concurrent deliveries cannot process it twice
+    // Lock the event to prevent concurrent duplicate processing
     const [events] = await connection.query(
-      `SELECT event_id, processing_status
+      `SELECT event_id, event_type, processing_status
        FROM payment_webhook_events
        WHERE event_id = ?
        FOR UPDATE`,
@@ -648,15 +648,16 @@ export const handleRazorpayWebhook = async (req, res) => {
     );
 
     if (events.length === 0) {
-      await connection.rollback();
-
-      return res.status(500).json({
-        success: false,
-        message: "Webhook event could not be recorded.",
-      });
+      throw new Error("Webhook event could not be recorded.");
     }
 
-    if (events[0].processing_status === "processed") {
+    const storedEvent = events[0];
+
+    if (storedEvent.event_type !== eventType) {
+      throw new Error("Webhook event ID does not match its event type.");
+    }
+
+    if (storedEvent.processing_status === "processed") {
       await connection.commit();
 
       return res.status(200).json({
@@ -665,121 +666,145 @@ export const handleRazorpayWebhook = async (req, res) => {
       });
     }
 
-    // Extract Razorpay payment details
+    // Ignore and record event types that this handler does not process
+    if (!["payment.captured", "payment.failed"].includes(eventType)) {
+      await connection.query(
+        `UPDATE payment_webhook_events
+         SET processing_status = 'processed',
+             processed_at = CURRENT_TIMESTAMP
+         WHERE event_id = ?`,
+        [eventId]
+      );
+
+      await connection.commit();
+
+      return res.status(200).json({
+        success: true,
+        message: "Unsupported event safely ignored.",
+      });
+    }
+
+    // Supported payment events must contain a valid payment entity
     const paymentEntity = eventData.payload?.payment?.entity;
 
-    if (
-      ["payment.captured", "payment.failed"].includes(eventType) &&
-      paymentEntity
-    ) {
-      const providerOrderId = paymentEntity.order_id;
-      const providerPaymentId = paymentEntity.id;
+    if (!paymentEntity || typeof paymentEntity !== "object") {
+      throw new Error("Payment details are missing from the webhook.");
+    }
 
+    const providerOrderId = paymentEntity.order_id;
+    const providerPaymentId = paymentEntity.id;
+    const paymentAmount = Number(paymentEntity.amount);
+    const paymentCurrency = paymentEntity.currency;
+
+    if (
+      typeof providerOrderId !== "string" ||
+      !providerOrderId.trim() ||
+      typeof providerPaymentId !== "string" ||
+      !providerPaymentId.trim() ||
+      !Number.isSafeInteger(paymentAmount) ||
+      paymentAmount <= 0 ||
+      typeof paymentCurrency !== "string"
+    ) {
+      throw new Error("Invalid Razorpay payment details.");
+    }
+
+    // Find and lock the corresponding payment record
+    const [payments] = await connection.query(
+      `SELECT id, order_id, amount, currency, status, provider_payment_id
+       FROM order_payments
+       WHERE provider_order_id = ?
+       LIMIT 1
+       FOR UPDATE`,
+      [providerOrderId]
+    );
+
+    // Do not acknowledge an event for an unknown order.
+    // Returning an error allows Razorpay to retry delivery.
+    if (payments.length === 0) {
+      throw new Error(
+        `No matching payment record found for Razorpay order ${providerOrderId}.`
+      );
+    }
+
+    const payment = payments[0];
+
+    // Verify amount and currency against our database
+    const expectedAmount = Math.round(Number(payment.amount) * 100);
+
+    if (
+      paymentAmount !== expectedAmount ||
+      paymentCurrency !== payment.currency
+    ) {
+      throw new Error(
+        "Webhook payment amount or currency does not match the order."
+      );
+    }
+
+    if (eventType === "payment.captured") {
+      // Never overwrite a different captured payment ID
       if (
-        typeof providerOrderId === "string" &&
-        typeof providerPaymentId === "string"
+        payment.status === "paid" &&
+        payment.provider_payment_id &&
+        payment.provider_payment_id !== providerPaymentId
       ) {
-        const [payments] = await connection.query(
-          `SELECT id, order_id, amount, currency, status, provider_payment_id
-           FROM order_payments
-           WHERE provider_order_id = ?
-           LIMIT 1
-           FOR UPDATE`,
-          [providerOrderId]
+        throw new Error(
+          "A different payment is already recorded for this order."
+        );
+      }
+
+      // A refunded payment must never be changed back to paid
+      if (payment.status !== "refunded") {
+        await connection.query(
+          `UPDATE order_payments
+           SET provider_payment_id = ?,
+               payment_method = ?,
+               status = 'paid',
+               paid_at = COALESCE(paid_at, CURRENT_TIMESTAMP)
+           WHERE id = ?`,
+          [
+            providerPaymentId,
+            paymentEntity.method || null,
+            payment.id,
+          ]
         );
 
-        if (payments.length > 0) {
-          const payment = payments[0];
-
-          // Verify payment amount and currency against our database
-          const amountMatches =
-            Number(paymentEntity.amount) ===
-            Math.round(Number(payment.amount) * 100);
-
-          const currencyMatches =
-            paymentEntity.currency === payment.currency;
-
-          if (!amountMatches || !currencyMatches) {
-            throw new Error(
-              "Webhook payment amount or currency does not match the order."
-            );
-          }
-
-          if (eventType === "payment.captured") {
-            // Do not overwrite a different payment ID
-            if (
-              payment.status === "paid" &&
-              payment.provider_payment_id &&
-              payment.provider_payment_id !== providerPaymentId
-            ) {
-              throw new Error(
-                "A different payment is already recorded for this order."
-              );
-            }
-
-            // A captured payment is authoritative, even if an earlier
-            // payment.failed event was received.
-            if (payment.status !== "refunded") {
-              await connection.query(
-                `UPDATE order_payments
-                 SET provider_payment_id = ?,
-                     payment_method = ?,
-                     status = 'paid',
-                     paid_at = COALESCE(paid_at, CURRENT_TIMESTAMP)
-                 WHERE id = ?`,
-                [
-                  providerPaymentId,
-                  paymentEntity.method || null,
-                  payment.id,
-                ]
-              );
-
-              await connection.query(
-                `UPDATE orders
-                 SET payment_status = 'paid'
-                 WHERE id = ?`,
-                [payment.order_id]
-              );
-            }
-          }
-
-          if (eventType === "payment.failed") {
-            // Never downgrade a payment that is already paid
-            if (
-              payment.status === "pending" &&
-              !payment.provider_payment_id
-            ) {
-              await connection.query(
-                `UPDATE order_payments
-                 SET provider_payment_id = ?,
-                     payment_method = ?,
-                     status = 'failed'
-                 WHERE id = ? AND status = 'pending'`,
-                [
-                  providerPaymentId,
-                  paymentEntity.method || null,
-                  payment.id,
-                ]
-              );
-
-              await connection.query(
-                `UPDATE orders
-                 SET payment_status = 'failed'
-                 WHERE id = ? AND payment_status = 'pending'`,
-                [payment.order_id]
-              );
-            }
-          }
-        } else {
-          console.warn(
-            "Razorpay webhook received for an unknown order:",
-            providerOrderId
-          );
-        }
+        await connection.query(
+          `UPDATE orders
+           SET payment_status = 'paid'
+           WHERE id = ?`,
+          [payment.order_id]
+        );
       }
     }
 
-    // Mark event as processed in the same transaction as payment updates
+    if (eventType === "payment.failed") {
+      // Do not save failed payment IDs in the unique provider_payment_id
+      // column because Razorpay may create multiple payment attempts
+      // for the same order.
+
+      // Never downgrade a successful or refunded payment
+      if (payment.status === "pending") {
+        await connection.query(
+          `UPDATE order_payments
+           SET payment_method = ?,
+               status = 'failed'
+           WHERE id = ? AND status = 'pending'`,
+          [
+            paymentEntity.method || null,
+            payment.id,
+          ]
+        );
+
+        await connection.query(
+          `UPDATE orders
+           SET payment_status = 'failed'
+           WHERE id = ? AND payment_status = 'pending'`,
+          [payment.order_id]
+        );
+      }
+    }
+
+    // Mark the event processed in the same transaction as payment updates
     await connection.query(
       `UPDATE payment_webhook_events
        SET processing_status = 'processed',
@@ -803,9 +828,12 @@ export const handleRazorpayWebhook = async (req, res) => {
       }
     }
 
-    console.error("Razorpay webhook processing failed:", error.message);
+    console.error(
+      "Razorpay webhook processing failed:",
+      error.message
+    );
 
-    // Record failure so a retry can process the event again
+    // Mark the event as failed so a future delivery can retry it
     try {
       const eventId = req.headers["x-razorpay-event-id"];
 
@@ -813,15 +841,19 @@ export const handleRazorpayWebhook = async (req, res) => {
         await db.query(
           `UPDATE payment_webhook_events
            SET processing_status = 'failed'
-           WHERE event_id = ? AND processing_status != 'processed'`,
+           WHERE event_id = ?
+           AND processing_status != 'processed'`,
           [eventId]
         );
       }
     } catch (updateError) {
-      console.error("Could not update webhook event status:", updateError);
+      console.error(
+        "Could not update webhook event status:",
+        updateError
+      );
     }
 
-    // Non-2xx response tells Razorpay that it may retry the webhook
+    // A non-2xx response allows Razorpay to retry the event
     return res.status(500).json({
       success: false,
       message: "Webhook processing failed.",
